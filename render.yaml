@@ -1,0 +1,35 @@
+# Render Blueprint — deploy via Dashboard > New > Blueprint
+# Render reads this file from the connected GitHub repo and provisions
+# both the web service (Docker) and a managed Key Value (Redis) instance.
+
+services:
+  # FastAPI agent built from the repo's Dockerfile
+  - type: web
+    name: day12-agent
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health        # Render restarts the service if this fails
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "10"
+      - key: MONTHLY_BUDGET_USD
+        value: "10"
+      - key: AGENT_API_KEY
+        sync: false                 # secret — set manually in the dashboard
+      - key: REDIS_URL
+        fromService:                # injected from the managed Redis below
+          type: keyvalue
+          name: day12-redis
+          property: connectionString
+
+  # Managed Redis-compatible store (sessions, rate limits, budgets)
+  - type: keyvalue
+    name: day12-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []                 # internal access only

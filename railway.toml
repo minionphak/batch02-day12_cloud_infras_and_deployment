@@ -1,0 +1,8 @@
+# Railway config — alternative deployment target
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
