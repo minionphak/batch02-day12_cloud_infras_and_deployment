@@ -2,8 +2,10 @@
 
 ## Public URL
 
-> **[PENDING — filled in after Render deploy]**
-> https://day12-agent.onrender.com
+**https://day12-agent-b8x9.onrender.com**
+
+> Free plan: the instance spins down when idle, so the first request after a
+> quiet period can take ~50 s (cold start).
 
 ## Platform
 
@@ -22,21 +24,21 @@
 ### Health Check
 
 ```bash
-curl https://day12-agent.onrender.com/health
+curl https://day12-agent-b8x9.onrender.com/health
 # Expected: {"status": "ok", "uptime_seconds": ..., "instance": "...", ...}
 ```
 
 ### Readiness Check
 
 ```bash
-curl https://day12-agent.onrender.com/ready
+curl https://day12-agent-b8x9.onrender.com/ready
 # Expected: {"ready": true, "instance": "..."}
 ```
 
 ### Authentication required
 
 ```bash
-curl -X POST https://day12-agent.onrender.com/ask \
+curl -X POST https://day12-agent-b8x9.onrender.com/ask \
   -H "Content-Type: application/json" \
   -d '{"user_id": "test", "question": "Hello"}'
 # Expected: HTTP 401 (missing X-API-Key)
@@ -45,7 +47,7 @@ curl -X POST https://day12-agent.onrender.com/ask \
 ### API Test (with authentication)
 
 ```bash
-curl -X POST https://day12-agent.onrender.com/ask \
+curl -X POST https://day12-agent-b8x9.onrender.com/ask \
   -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"user_id": "test", "question": "Hello"}'
@@ -57,7 +59,7 @@ curl -X POST https://day12-agent.onrender.com/ask \
 ```bash
 for i in {1..12}; do
   curl -s -o /dev/null -w "%{http_code}\n" \
-    -X POST https://day12-agent.onrender.com/ask \
+    -X POST https://day12-agent-b8x9.onrender.com/ask \
     -H "X-API-Key: YOUR_KEY" \
     -H "Content-Type: application/json" \
     -d '{"user_id": "test", "question": "test"}'
@@ -74,6 +76,19 @@ done
 - `LOG_LEVEL` = INFO
 - `RATE_LIMIT_PER_MINUTE` = 10
 - `MONTHLY_BUDGET_USD` = 10
+
+## Production verification results (2026-06-12, live service)
+
+| Check | Result |
+|-------|--------|
+| `GET /health` | 200 — `{"status":"ok", "instance":"instance-45bfc7", ...}` |
+| `GET /ready` | 200 — `{"ready":true, "instance":"instance-45bfc7"}` (Redis connected) |
+| `POST /ask` without key | 401 — "Missing API key" |
+| `POST /ask` with wrong key | 403 — "Invalid API key" |
+| `POST /ask` with valid key | 200 — answer + `session_id` + `served_by` + `rate_limit` + `cost_usd` |
+| 12 requests in one minute | ten 200s, then 429s (sliding-window limit enforced) |
+| `GET /usage/{user_id}` | 200 — `{"used_usd":0.00012, "budget_usd":10.0, "remaining_usd":9.99988}` |
+| `GET /chat/{session_id}/history` | 200 — both conversation turns persisted in Redis |
 
 ## Local verification results (pre-deploy)
 
