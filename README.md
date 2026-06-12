@@ -79,7 +79,7 @@ Error responses: `401` missing key · `403` invalid key · `429` rate limit (10 
 ## Verify production readiness
 
 ```bash
-python check_production_ready.py   # 20/20 checks
+python check_production_ready.py   
 ```
 
 ## Deploy
